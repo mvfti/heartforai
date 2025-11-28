@@ -139,7 +139,7 @@ def call_mistral_for_query(missing_fields: List[str]) -> str:
 def read_markdown_file() -> str:
     """Reads the content of a Markdown file."""
 
-    CONDITIONS_FILE_PATH = "./products/insurance/bank_insurance/home/GENERAL_CONDITIONS.MD" 
+    CONDITIONS_FILE_PATH = "./products/insurance/bank_insurance/home/GENERAL_CONDITIONS.md" 
     try:
         with open(CONDITIONS_FILE_PATH, 'r', encoding='utf-8') as f:
             return f.read()
