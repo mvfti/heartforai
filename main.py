@@ -66,7 +66,7 @@ class PropertyClaim(BaseModel):
     )
     
     damage_location: Optional[str] = Field(
-        description="The precise location of the damage (e.g., kitchen, basement, roof). Required for execution. Put null if not mentioned."
+        description="The precise location of the damage (e.g., kitnchen, basement, roof). Required for execution. Put null if not mentioed."
     )
     
     def get_critical_fields(self) -> List[str]:
@@ -313,32 +313,11 @@ async def main(message: cl.Message):
     
     validated_instance: PropertyClaim = PropertyClaim.model_validate_json(json_str)
 
-    policy_data = cl.user_session.get("policy_data")
-
-    # 3. Merge data: create a combined dictionary
-    if policy_data:
-        # Merge claim data (LLM) with policy data (DB)
-        current_claim_data = validated_instance.model_dump()
-        merged_data = {**current_claim_data, **policy_data}
-        
-        # 4. Create a FINAL PropertyClaim instance with ALL data
-        final_validated_instance = PropertyClaim.model_validate(merged_data)
-        
-        # The rest of the script should use final_validated_instance
-        validated_instance = final_validated_instance
-
-    # Display extracted JSON for traceability (with Enum conversion)
-    json_trace = {k: (v.value if isinstance(v, Enum) else v) for k, v in validated_instance.model_dump().items()}
-    await cl.Message(
-        content=f"**Extracted JSON:**\n```json\n{json.dumps(json_trace, indent=2)}\n```",
-        author="Model Trace"
-    ).send()
-
     # -----------------------------------------------------
     # STEP B: VALIDATION AND REQUEST FOR MISSING INFORMATION  
     # -----------------------------------------------------
         
-    missing_fields = find_missing_critical_data(json.dumps(validated_instance.model_dump()))
+    missing_fields = find_missing_critical_data(cl.user_session.get("current_incident_data"))
             
     if missing_fields:
         await cl.Message(content="⚠️ Certaines informations essentielles sont manquantes pour avancer.").send()
@@ -375,12 +354,15 @@ async def main(message: cl.Message):
             json_str = await cl.make_async(call_mistral_for_json)(updated_input)
             # Mise à jour de l'instance validée
             validated_instance = PropertyClaim.model_validate_json(json_str)
-            
+
+            policy_data = cl.user_session.get("policy_data")
             # (Important) On refusionne avec les données police car l'extraction LLM ne les a pas
             if policy_data:
                 merged_data = {**validated_instance.model_dump(), **policy_data}
                 validated_instance = PropertyClaim.model_validate(merged_data)
-                
+                json_trace = {k: (v.value if isinstance(v, Enum) else v) for k, v in validated_instance.model_dump().items()}
+                cl.user_session.set("current_incident_data", json.dumps(json_trace, indent=2))
+            
             # Affichage de confirmation
             await cl.Message(
                 content=f"✅ Merci ! Dossier complet. \nChamps mis à jour : {', '.join(missing_fields)}", 
@@ -397,7 +379,7 @@ async def main(message: cl.Message):
     await cl.Message(content="⚖️ **LLM 3 - Coverage Assessment:** Evaluating claim eligibility...", author="Agent").send()
     
     coverage_assessment = await cl.make_async(call_mistral_to_assess_coverage)(
-        json.dumps(dict()),  # put the form with the mandatory information
+        cl.user_session.get("current_incident_data"),  # put the form with the mandatory information
     )
     
     await cl.Message(
