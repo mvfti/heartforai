@@ -7,7 +7,10 @@ import random
 import os
 from chainlit.input_widget import TextInput
 from mistralai import Mistral
+from flask import Flask, Request
 
+
+app = Flask(__name__)
 
 global client
 global MISTRAL_MODEL
@@ -93,6 +96,7 @@ def get_random_policy():
 # 2. LLM FUNCTIONS (Mistral API Calls)
 # ==========================================
 
+@app.route('/invoke-llm-for-json', methods=['POST'])
 def call_mistral_for_json(user_text: str) -> Dict[str, Any]:
     """LLM 1: Extracts user data into structured JSON (PropertyClaim)."""
     
@@ -115,7 +119,7 @@ def call_mistral_for_json(user_text: str) -> Dict[str, Any]:
     )
     return response.choices[0].message.content
 
-
+@app.route('/invoke-llm-missing-info', methods=['POST'])
 def call_mistral_for_query(missing_fields: List[str]) -> str:
     """LLM 2: Generates a question to retrieve missing information."""
     
@@ -135,7 +139,7 @@ def call_mistral_for_query(missing_fields: List[str]) -> str:
     )
     return response.choices[0].message.content
 
-
+@app.route('/markdown-file', methods=['POST'])
 def read_markdown_file() -> str:
     """Reads the content of a Markdown file."""
 
@@ -146,7 +150,8 @@ def read_markdown_file() -> str:
     except FileNotFoundError:
         print(f"Error: The file {CONDITIONS_FILE_PATH} was not found.")
         return "ERROR: Client conditions file not found."
-    
+
+@app.route('/invoke-llm-access-coverage', methods=['POST'])
 def call_mistral_to_assess_coverage(client_str: str) -> str:
     """
     LLM 2: Evaluates client coverage based on extracted data 
@@ -198,6 +203,7 @@ def call_mistral_to_assess_coverage(client_str: str) -> str:
     
     return response.choices[0].message.content
 
+@app.route('/invoke-llm-for-synthesis', methods=['POST'])
 def call_mistral_for_synthesis(final_prompt: str) -> str:
     """LLM 3: Synthesizes the humanized response after deterministic execution."""
     
@@ -245,6 +251,7 @@ def determinist_path(data: PropertyClaim) -> str:
 # 4. ORCHESTRATION CHAINLIT (The Engine) 
 # ==========================================
 
+@app.route('/missing-data', methods=['POST'])
 def find_missing_critical_data(data_str: str) -> List[str]:
     """
     Returns the list of field names (snake_case) that are critical and missing.
