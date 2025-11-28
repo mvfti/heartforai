@@ -5,8 +5,9 @@ import random
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List
+from mimesis.locales import Locale  
 
-from mimesis import Datetime, Numeric
+from mimesis import Datetime, Numeric, Person, Address
 from models import PolicyHolder
 
 
@@ -65,6 +66,10 @@ class PolicyDataGenerator:
         random.seed(seed)
         self.datetime_generator = Datetime(seed=seed)
         self.numeric_generator = Numeric(seed=seed)
+        self.person_nl = Person(locale='nl', seed=seed)
+        self.person_fr = Person(locale='fr', seed=seed)
+        self.address_nl = Address(locale=Locale.NL_BE, seed=seed) 
+        self.address_fr = Address(locale=Locale.NL_BE, seed=seed)
 
     def _get_postal_code_and_language(self) -> tuple[str, str]:
         """
@@ -138,6 +143,23 @@ class PolicyDataGenerator:
         # Round to 2 decimal places
         return round(premium, 2)
 
+    def _generate_date_of_birth(self) -> datetime:
+        """
+        Generate a date of birth for an adult (18-80 years old).
+
+        Returns:
+            Date of birth
+        """
+        # Generate birth dates for adults aged 18-80
+        current_year = datetime.now().year
+        birth_year_start = current_year - 80
+        birth_year_end = current_year - 18
+
+        return self.datetime_generator.datetime(
+            start=birth_year_start,
+            end=birth_year_end
+        )
+
     def generate_policy_holder(self) -> PolicyHolder:
         """
         Generate a single synthetic policy holder record.
@@ -151,6 +173,24 @@ class PolicyDataGenerator:
         # Get postal code and language
         postal_code, language = self._get_postal_code_and_language()
 
+        # Generate client information based on language
+        if language == "NL":
+            client_name = self.person_nl.full_name()
+            street = self.address_nl.street_name()
+            street_number = self.address_nl.street_number()
+            city = self.address_nl.city()
+        else:  # FR
+            client_name = self.person_fr.full_name()
+            street = self.address_fr.street_name()
+            street_number = self.address_fr.street_number()
+            city = self.address_fr.city()
+
+        # Format address
+        address = f"{street} {street_number}, {postal_code} {city}"
+
+        # Generate date of birth
+        date_of_birth = self._generate_date_of_birth()
+
         # Generate dates
         start_date, end_date = self._generate_dates()
 
@@ -162,6 +202,9 @@ class PolicyDataGenerator:
 
         return PolicyHolder(
             policy_id=self._generate_policy_id(),
+            client_name=client_name,
+            address=address,
+            date_of_birth=date_of_birth,
             product_id=product["product_id"],
             product_name=product["product_name"],
             coverage_desc=coverage_desc,
@@ -200,6 +243,9 @@ class PolicyDataGenerator:
         for ph in policy_holders:
             record = {
                 "policy_id": ph.policy_id,
+                "client_name": ph.client_name,
+                "address": ph.address,
+                "date_of_birth": ph.date_of_birth.strftime("%Y-%m-%d"),
                 "product_id": ph.product_id,
                 "product_name": ph.product_name,
                 "coverage_desc": ph.coverage_desc,
