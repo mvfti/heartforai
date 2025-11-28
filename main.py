@@ -5,10 +5,17 @@ from enum import Enum
 import json
 import random
 import os
-
+from chainlit.input_widget import TextInput
 from mistralai import Mistral
 
 
+global client
+global MISTRAL_MODEL
+# --- Configuration ---
+MISTRAL_MODEL = "mistral-small-2506" 
+
+api_key = "DNJ2Duuaislp57c9ezYHX85ZvWhCQgIR"
+client = Mistral(api_key=api_key)
 
 # ==========================================
 # 1. ENUMERATION & SPECIALIZED SCHEMA (FRAUD)
@@ -62,13 +69,9 @@ class PropertyClaim(BaseModel):
         description="The precise location of the damage (e.g., kitchen, basement, roof). Required for execution. Put null if not mentioned."
     )
     
-    is_secure: Optional[bool] = Field(
-        description="True if the area is secured (e.g., fire out, leak stopped), False otherwise. Required for execution. Put null if not mentioned or unclear."
-    )
-
     def get_critical_fields(self) -> List[str]:
         # NOTE: should_do_action can be omitted here if it is not critical for execution
-        return ["should_do_action", "incident_date", "damage_location", "is_secure", "cause"]
+        return ["should_do_action", "incident_date", "damage_location", "cause"]
     
 
 # ==========================================
@@ -86,12 +89,11 @@ def get_random_policy():
 
         return random_policy
     
-
 # ==========================================
 # 2. LLM FUNCTIONS (Mistral API Calls)
 # ==========================================
 
-def call_mistral_for_json(user_text: str, client: Mistral) -> Dict[str, Any]:
+def call_mistral_for_json(user_text: str) -> Dict[str, Any]:
     """LLM 1: Extracts user data into structured JSON (PropertyClaim)."""
     
     extraction_prompt = (
@@ -114,7 +116,7 @@ def call_mistral_for_json(user_text: str, client: Mistral) -> Dict[str, Any]:
     return response.choices[0].message.content
 
 
-def call_mistral_for_query(missing_fields: List[str], client: Mistral) -> str:
+def call_mistral_for_query(missing_fields: List[str]) -> str:
     """LLM 2: Generates a question to retrieve missing information."""
     
     query_prompt = (
@@ -134,24 +136,23 @@ def call_mistral_for_query(missing_fields: List[str], client: Mistral) -> str:
     return response.choices[0].message.content
 
 
-def read_markdown_file(file_path: str) -> str:
+def read_markdown_file() -> str:
     """Reads the content of a Markdown file."""
+
+    CONDITIONS_FILE_PATH = "./products/insurance/bank_insurance/home/GENERAL_CONDITIONS.MD" 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(CONDITIONS_FILE_PATH, 'r', encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
-        print(f"Error: The file {file_path} was not found.")
+        print(f"Error: The file {CONDITIONS_FILE_PATH} was not found.")
         return "ERROR: Client conditions file not found."
     
-def call_mistral_to_assess_coverage(client_data: Dict, client: Mistral) -> str:
+def call_mistral_to_assess_coverage(client_data: Dict) -> str:
     """
     LLM 2: Evaluates client coverage based on extracted data 
     and general conditions.
     """
-
-    CONDITIONS_FILE_PATH = "./products/insurance/bank_insurance/home/GENERAL_CONDITIONS.MD" 
-
-    general_conditions_md = read_markdown_file(CONDITIONS_FILE_PATH)
+    general_conditions_md = read_markdown_file()
     client_data_str = "\n".join([f"- {k}: {v}" for k, v in client_data.items()])
     
     system_prompt = (
@@ -194,7 +195,7 @@ def call_mistral_to_assess_coverage(client_data: Dict, client: Mistral) -> str:
     
     return response.choices[0].message.content
 
-def call_mistral_for_synthesis(final_prompt: str, client: Mistral) -> str:
+def call_mistral_for_synthesis(final_prompt: str) -> str:
     """LLM 3: Synthesizes the humanized response after deterministic execution."""
     
     synthesis_prompt = (
@@ -242,43 +243,50 @@ def determinist_path(data: PropertyClaim) -> str:
 # ==========================================
 
 def find_missing_critical_data(data: dict) -> List[str]:
-    """Determines which critical fields are missing (null) for execution."""
-    
-    # Using the PropertyClaim instance to get critical fields
-    instance = PropertyClaim(**data)
+    """
+    Returns the list of field names (snake_case) that are critical and missing.
+    """
+    instance = PropertyClaim.model_validate(data)
     critical_fields = instance.get_critical_fields()
-    
     missing = []
     for field_name in critical_fields:
         value = data.get(field_name)
-        # Missing if None, or if it's the amount and it is 0.0
         if value is None or (isinstance(value, float) and value == 0.0):
-            missing.append(field_name.replace('_', ' ').title())
-            
+            missing.append(field_name)  
     return missing
 
 
 @cl.on_chat_start
 async def start():
-    global client
-    global MISTRAL_MODEL
-    # --- Configuration ---
-    MISTRAL_MODEL = "mistral-small-2506" 
 
-    api_key = "DNJ2Duuaislp57c9ezYHX85ZvWhCQgIR"
-    client = Mistral(api_key=api_key)
 
+    test = cl.Text(content="Initializing Mistral client...")
     cl.user_session.set("current_incident_data", None)
     await cl.Message(
         content="👋 Welcome to HomeResQ. How can I assist you today?",
     ).send()
 
+    policy_data = get_random_policy()
+    
+    cl.user_session.set("policy_data", policy_data)
+
+    await cl.Message(
+        content=f"**Policy Data Loaded:** Policy ID `{policy_data.get('policy_id')}` ({policy_data.get('product_name')}). How can I help you with your claim today?",
+        author="Assur-Bot"
+    ).send()
+
+
+@cl.on_settings_update
+async def setup_agent(settings):
+    # À chaque frappe dans le formulaire, on sauvegarde les données dans la session
+    cl.user_session.set("form_data", settings)
 
 @cl.on_message
 async def main(message: cl.Message):
     global client
     user_input = message.content
     
+    policy_data = get_random_policy()
     current_data = cl.user_session.get("current_incident_data")
     
     # Concatenate collection history if necessary
@@ -291,7 +299,7 @@ async def main(message: cl.Message):
     await cl.Message(content="🧠 **LLM 1 - Extraction :** Filling the PropertyClaim schema...", author="Agent").send()
 
     try:
-        json_str = await cl.make_async(call_mistral_for_json)(user_input, client)
+        json_str = await cl.make_async(call_mistral_for_json)(user_input)
     except Exception as e:
         await cl.Message(content=f"Error during Mistral call (Extraction): {e}.", author="System Error").send()
         return
@@ -300,6 +308,21 @@ async def main(message: cl.Message):
     cl.user_session.set("current_incident_data", json_str)
     
     validated_instance: PropertyClaim = PropertyClaim.model_validate_json(json_str)
+
+    policy_data = cl.user_session.get("policy_data")
+
+    # 3. Merge data: create a combined dictionary
+    if policy_data:
+        # Merge claim data (LLM) with policy data (DB)
+        current_claim_data = validated_instance.model_dump()
+        merged_data = {**current_claim_data, **policy_data}
+        
+        # 4. Create a FINAL PropertyClaim instance with ALL data
+        final_validated_instance = PropertyClaim.model_validate(merged_data)
+        
+        # The rest of the script should use final_validated_instance
+        validated_instance = final_validated_instance
+
     # Display extracted JSON for traceability (with Enum conversion)
     json_trace = {k: (v.value if isinstance(v, Enum) else v) for k, v in validated_instance.model_dump().items()}
     await cl.Message(
@@ -314,16 +337,55 @@ async def main(message: cl.Message):
     missing_fields = find_missing_critical_data(validated_instance.model_dump())
             
     if missing_fields:
-        # LLM 2: Generates Question and pauses execution
-        await cl.Message(content="❓ **Validation:** Missing critical data detected...", author="Agent").send()
-        query_message = await cl.make_async(call_mistral_for_query)(missing_fields, client)
+        await cl.Message(content="⚠️ Certaines informations essentielles sont manquantes pour avancer.").send()
         
-        await cl.Message(
-            content=query_message,
-            author="Assur-Bot"
-        ).send()
-        return 
-    
+        additional_info = []
+
+        # --- BOUCLE "FORMULAIRE" ---
+        for field in missing_fields:
+            # 1. On rend le nom du champ plus lisible (ex: incident_date -> Incident Date)
+            human_label = field.replace('_', ' ').capitalize()
+            
+            # 2. On utilise l'LLM (optionnel) ou une phrase simple pour poser la question
+            # Ici, on fait simple pour simuler un champ de formulaire
+            question_text = f"👉 Veuillez préciser : **{human_label}** ?"
+            
+            # 3. AskUserMessage bloque le script et attend la réponse de l'utilisateur
+            res = await cl.AskUserMessage(content=question_text, timeout=180).send()
+            
+            if res:
+                user_val = res['output']
+                additional_info.append(f"L'utilisateur précise pour {field} : {user_val}")
+        
+        # --- MISE A JOUR DES DONNÉES ---
+        # On injecte les nouvelles réponses dans le contexte et on relance l'extraction
+        # pour s'assurer que le format (Date, Booléen) est correct.
+        
+        await cl.Message(content="🔄 Mise à jour du dossier en cours...", author="System").send()
+        
+        # On concatène l'ancien input avec les nouvelles infos
+        updated_input = f"{user_input} \n " + " \n ".join(additional_info)
+        
+        # RE-RUN LLM 1 (Extraction) avec les nouvelles infos
+        try:
+            json_str = await cl.make_async(call_mistral_for_json)(updated_input)
+            # Mise à jour de l'instance validée
+            validated_instance = PropertyClaim.model_validate_json(json_str)
+            
+            # (Important) On refusionne avec les données police car l'extraction LLM ne les a pas
+            if policy_data:
+                merged_data = {**validated_instance.model_dump(), **policy_data}
+                validated_instance = PropertyClaim.model_validate(merged_data)
+                
+            # Affichage de confirmation
+            await cl.Message(
+                content=f"✅ Merci ! Dossier complet. \nChamps mis à jour : {', '.join(missing_fields)}", 
+                author="Agent"
+            ).send()
+
+        except Exception as e:
+            await cl.Message(content=f"Erreur lors de la mise à jour : {e}").send()
+            return
     # -----------------------------------------------------
     # STEP C: EVALUATION IF THE CLIENT IS COVERED
     # -----------------------------------------------------
