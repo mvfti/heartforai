@@ -32,8 +32,12 @@ class ClaimCategory(str, Enum):
 
 class PropertyClaim(BaseModel):
     """Specific schema for PROPERTY DAMAGE claims (House/Apartment)."""
-    claim_category: ClaimCategory = Field(default=ClaimCategory.PROPERTY_DAMAGE, Literal=True)
-    
+    #claim_category: ClaimCategory = Field(default=ClaimCategory.PROPERTY_DAMAGE, Literal=True)
+    claim_category: ClaimCategory = Field(
+        default=ClaimCategory.PROPERTY_DAMAGE,
+        # FIX: Use json_schema_extra to pass any non-standard metadata
+        json_schema_extra={'Literal': True}
+    )
     # -----------------------------------------------------
     # I. POLICY DATA (Filled by the system)
     # -----------------------------------------------------
@@ -414,3 +418,7 @@ async def main(message: cl.Message):
 
     # Clean up state after successful execution
     cl.user_session.set("current_incident_data", None) 
+
+if __name__ == '__main__':
+    # Run the app in debug mode
+    app.run(debug=True)
