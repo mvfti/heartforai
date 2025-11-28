@@ -147,11 +147,14 @@ def read_markdown_file() -> str:
         print(f"Error: The file {CONDITIONS_FILE_PATH} was not found.")
         return "ERROR: Client conditions file not found."
     
-def call_mistral_to_assess_coverage(client_data: Dict) -> str:
+def call_mistral_to_assess_coverage(client_str: str) -> str:
     """
     LLM 2: Evaluates client coverage based on extracted data 
     and general conditions.
     """
+
+    client_data = dict(json.loads(client_str)) 
+    
     general_conditions_md = read_markdown_file()
     client_data_str = "\n".join([f"- {k}: {v}" for k, v in client_data.items()])
     
@@ -242,10 +245,11 @@ def determinist_path(data: PropertyClaim) -> str:
 # 4. ORCHESTRATION CHAINLIT (The Engine) 
 # ==========================================
 
-def find_missing_critical_data(data: dict) -> List[str]:
+def find_missing_critical_data(data_str: str) -> List[str]:
     """
     Returns the list of field names (snake_case) that are critical and missing.
     """
+    data = json.loads(data_str)
     instance = PropertyClaim.model_validate(data)
     critical_fields = instance.get_critical_fields()
     missing = []
@@ -334,7 +338,7 @@ async def main(message: cl.Message):
     # STEP B: VALIDATION AND REQUEST FOR MISSING INFORMATION  
     # -----------------------------------------------------
         
-    missing_fields = find_missing_critical_data(validated_instance.model_dump())
+    missing_fields = find_missing_critical_data(json.dumps(validated_instance.model_dump()))
             
     if missing_fields:
         await cl.Message(content="⚠️ Certaines informations essentielles sont manquantes pour avancer.").send()
@@ -393,8 +397,7 @@ async def main(message: cl.Message):
     await cl.Message(content="⚖️ **LLM 3 - Coverage Assessment:** Evaluating claim eligibility...", author="Agent").send()
     
     coverage_assessment = await cl.make_async(call_mistral_to_assess_coverage)(
-        dict(),  # put the form with the mandatory information
-        client
+        json.dumps(dict()),  # put the form with the mandatory information
     )
     
     await cl.Message(
