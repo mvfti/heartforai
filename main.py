@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from enum import Enum
 import json
+import random
 import os
 
 from mistralai import Mistral
@@ -51,6 +52,22 @@ class PropertyClaim(BaseModel):
     def get_critical_fields(self) -> List[str]:
         # NOTE: should_do_action peut être omis ici si ce n'est pas critique pour l'exécution
         return ["should_do_action", "incident_date", "damage_location", "is_secure", "cause"]
+    
+
+# ==========================================
+# 1.1. LLM FUNCTIONS (Mistral API Calls)
+# ==========================================
+
+def get_random_policy():
+    with open('database/db.json', 'r') as file:
+        # data will be a Python dictionary or list
+        data = file.read()
+        python_list = json.loads(data)
+        random_policy = random.choice(python_list)
+
+        print(random_policy)
+
+        return random_policy
     
 
 # ==========================================
