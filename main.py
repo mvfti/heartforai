@@ -18,23 +18,40 @@ class ClaimCategory(str, Enum):
     FRAUD = "FRAUD"
     PROPERTY_DAMAGE = "PROPERTY_DAMAGE"
     
+
 class PropertyClaim(BaseModel):
     """Specific schema for PROPERTY DAMAGE claims (House/Apartment)."""
     claim_category: ClaimCategory = Field(default=ClaimCategory.PROPERTY_DAMAGE, Literal=True)
-    shoud_do_action: str = Field(
-        description="Based on the user input see if we need to do an action (if it doesnt talk about house damage, we do nothing). Possible values: [True, False]. "
+    
+    # Rendre SHOULD_DO_ACTION Optional si le LLM peut ne rien dire sur l'action
+    should_do_action: Optional[str] = Field( 
+        description="Based on the user input, determine if we need to proceed with an action (True) or not (False). Possible values: ['True', 'False']. Put null if the input is completely irrelevant to a claim."
     )
+    
     damage_type: str = Field(
-        description="Type of damage (e.g., Fire, Water Leak, Storm). Possible values: [Fire, Water, Storm]. "
+        description="Type of damage (e.g., Fire, Water Leak, Storm). Possible values: [Fire, Water, Storm]. The LLM MUST choose one value. Put 'UNKNOWN' if classification is impossible."
     )
-    incident_date: Optional[str] = Field(description="The exact date and time of the incident. Required for execution.")
-    damage_location: Optional[str] = Field(description="The precise location of the damage (e.g., kitchen, basement, roof). Required for execution.")
-    is_secure: Optional[bool] = Field(description="True if the area is secured (e.g., fire out, leak stopped), False otherwise. Required for execution.")
+    
+    cause: Optional[str] = Field( # Changé en Optional[str] pour accepter JSON null
+        description="Cause that led to the damage type. Put null if not mentioned."
+    )
+    
+    incident_date: Optional[str] = Field(
+        description="The exact date and time of the incident. Required for execution. Put null if not mentioned."
+    )
+    
+    damage_location: Optional[str] = Field(
+        description="The precise location of the damage (e.g., kitchen, basement, roof). Required for execution. Put null if not mentioned."
+    )
+    
+    is_secure: Optional[bool] = Field(
+        description="True if the area is secured (e.g., fire out, leak stopped), False otherwise. Required for execution. Put null if not mentioned or unclear."
+    )
 
     def get_critical_fields(self) -> List[str]:
-        return ["shoud_do_action", "incident_date", "damage_location", "is_secure"]
+        # NOTE: should_do_action peut être omis ici si ce n'est pas critique pour l'exécution
+        return ["should_do_action", "incident_date", "damage_location", "is_secure", "cause"]
     
-
 
 # ==========================================
 # 2. LLM FUNCTIONS (Mistral API Calls)
@@ -197,7 +214,7 @@ async def main(message: cl.Message):
     ).send()
 
     # -----------------------------------------------------
-    # ÉTAPE B : VALIDATION ET DEMANDE D'INFO MANQUANTE
+    # ÉTAPE B : VALIDATION ET DEMANDE D'INFO MANQUANTE  
     # -----------------------------------------------------
         
     missing_fields = find_missing_critical_data(validated_instance.model_dump())
