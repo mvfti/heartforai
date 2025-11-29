@@ -1,0 +1,391 @@
+/* ========================================
+   Chainlit Custom Stylesheet
+   Based on Figma Design System
+   ======================================== */
+
+/* Import Montserrat and Inter fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+/* ========================================
+   CSS Variables - Design Tokens
+   ======================================== */
+:root {
+  /* Primary Colors */
+  --primary-color: #A91345;
+  --primary-gradient-start: #C20045;
+  --primary-gradient-end: #DD3F8B;
+
+  /* Text Colors */
+  --text-primary: #060809;
+  --text-light: #51626F;
+  --text-white: #FFFFFF;
+
+  /* Background Colors */
+  --bg-disabled: #8A8A8A;
+  --bg-light: #D9D9D9;
+
+  /* Typography */
+  --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-secondary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 90px;
+
+  /* Shadows */
+  --shadow-sm: 2px 2px 16px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* ========================================
+   Global Styles
+   ======================================== */
+body {
+  font-family: var(--font-primary);
+  color: var(--text-primary);
+}
+
+/* ========================================
+   Chainlit Header Customization
+   ======================================== */
+#header {
+  background: linear-gradient(88.32deg, var(--primary-gradient-start) -3.79%, var(--primary-gradient-end) 98.5%);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-sm) 0;
+}
+
+#header .MuiToolbar-root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#header h1,
+#header .app-title {
+  font-family: var(--font-primary);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 17px;
+  color: var(--text-white);
+  text-align: center;
+}
+
+/* ========================================
+   Chat Container
+   ======================================== */
+#chat-container {
+  padding: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+/* ========================================
+   Messages
+   ======================================== */
+.message {
+  font-family: var(--font-primary);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 20px;
+  color: var(--text-primary);
+}
+
+.message-content {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+}
+
+/* Assistant messages */
+.message.assistant .message-content {
+  background: transparent;
+}
+
+/* User messages */
+.message.user .message-content {
+  background: rgba(169, 19, 69, 0.1);
+  border: 1px solid var(--primary-color);
+}
+
+/* ========================================
+   Headings & Typography
+   ======================================== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  color: var(--primary-color);
+}
+
+h1 {
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 22px;
+}
+
+h3, h4, h5, h6 {
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+}
+
+/* Links */
+a {
+  color: var(--primary-color);
+  text-decoration: underline;
+  font-weight: 300;
+}
+
+a:hover {
+  color: var(--primary-gradient-end);
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+button,
+.MuiButton-root {
+  font-family: var(--font-secondary);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 19px;
+  border-radius: var(--radius-lg);
+  padding: 8px 16px;
+  text-transform: none;
+}
+
+/* Primary Button */
+.MuiButton-contained,
+button.primary {
+  background: linear-gradient(88.32deg, var(--primary-gradient-start) -3.79%, var(--primary-gradient-end) 98.5%);
+  color: var(--text-white);
+  border: none;
+}
+
+.MuiButton-contained:hover,
+button.primary:hover {
+  background: linear-gradient(88.32deg, #A91345 -3.79%, #C20045 98.5%);
+}
+
+/* Secondary Button */
+.MuiButton-outlined,
+button.secondary {
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.MuiButton-outlined:hover,
+button.secondary:hover {
+  background: rgba(169, 19, 69, 0.05);
+}
+
+/* Disabled Button */
+.MuiButton-root:disabled,
+button:disabled {
+  background: var(--bg-disabled);
+  color: var(--text-white);
+  opacity: 0.6;
+}
+
+/* ========================================
+   Input Fields
+   ======================================== */
+input,
+textarea,
+.MuiTextField-root input,
+.MuiTextField-root textarea {
+  font-family: var(--font-primary);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 20px;
+  color: var(--text-primary);
+  border: 1px solid var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-light);
+  font-weight: 400;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(169, 19, 69, 0.1);
+}
+
+/* ========================================
+   Chat Input
+   ======================================== */
+#chat-input,
+.message-input {
+  border: 1px solid var(--text-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  font-family: var(--font-primary);
+  font-size: 16px;
+}
+
+#chat-input:focus,
+.message-input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Send button in chat input */
+#chat-input-container button,
+.message-input-container button {
+  background: linear-gradient(88.32deg, var(--primary-gradient-start) -3.79%, var(--primary-gradient-end) 98.5%);
+  color: var(--text-white);
+}
+
+/* ========================================
+   Cards & Containers
+   ======================================== */
+.MuiPaper-root,
+.card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Document/File Cards */
+.file-card,
+.document-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xs);
+  gap: var(--spacing-xs);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  min-height: 104px;
+}
+
+.file-card:hover,
+.document-card:hover {
+  background: rgba(169, 19, 69, 0.05);
+  cursor: pointer;
+}
+
+/* ========================================
+   Step Indicators & Progress
+   ======================================== */
+.step-indicator {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 17px;
+  color: var(--text-light);
+}
+
+.step-label {
+  font-family: var(--font-primary);
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 20px;
+  text-decoration: underline;
+  color: var(--text-primary);
+}
+
+/* ========================================
+   Scrollbar Customization
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* ========================================
+   Action Container
+   ======================================== */
+.action-container,
+.actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-lg) var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+/* ========================================
+   Utilities
+   ======================================== */
+.text-primary {
+  color: var(--primary-color);
+}
+
+.text-light {
+  color: var(--text-light);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+.gradient-bg {
+  background: linear-gradient(88.32deg, var(--primary-gradient-start) -3.79%, var(--primary-gradient-end) 98.5%);
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+@media (max-width: 768px) {
+  #chat-container {
+    padding: var(--spacing-sm);
+  }
+
+  .action-container,
+  .actions {
+    padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-sm);
+  }
+}
+
+/* ========================================
+   Dark Mode Support (Optional)
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #FFFFFF;
+    --text-light: #B0B8C0;
+    --bg-light: #2A2A2A;
+  }
+
+  input,
+  textarea {
+    background: #1a1a1a;
+    border-color: #444;
+    color: var(--text-primary);
+  }
+}

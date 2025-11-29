@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claim Progress - Belfius ClaimAssist</title>
+    <link rel="icon" href="/public/favicon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #C30045 0%, #8B0032 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            color: #C30045;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .claim-info {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #C30045 0%, #8B0032 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(195, 0, 69, 0.4);
+        }
+
+        .progress-overview {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.6s ease-out 0.1s both;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .progress-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .progress-percentage {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #C30045;
+        }
+
+        .progress-bar-container {
+            position: relative;
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #C30045 0%, #8B0032 100%);
+            border-radius: 15px;
+            transition: width 1s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .estimated-completion {
+            color: #666;
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+
+        .timeline {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.6s ease-out 0.2s both;
+        }
+
+        .timeline h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .timeline-items {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline-items::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #e0e0e0;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2.5rem;
+            animation: fadeInLeft 0.5s ease-out both;
+        }
+
+        .timeline-item:nth-child(1) { animation-delay: 0.3s; }
+        .timeline-item:nth-child(2) { animation-delay: 0.4s; }
+        .timeline-item:nth-child(3) { animation-delay: 0.5s; }
+        .timeline-item:nth-child(4) { animation-delay: 0.6s; }
+        .timeline-item:nth-child(5) { animation-delay: 0.7s; }
+
+        .timeline-marker {
+            position: absolute;
+            left: -2rem;
+            top: 5px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 3px solid #e0e0e0;
+            background: white;
+            transition: all 0.3s;
+        }
+
+        .timeline-item.completed .timeline-marker {
+            background: linear-gradient(135deg, #C30045 0%, #8B0032 100%);
+            border-color: #C30045;
+            box-shadow: 0 0 0 4px rgba(195, 0, 69, 0.2);
+        }
+
+        .timeline-item.completed .timeline-marker::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .timeline-item.in_progress .timeline-marker {
+            background: white;
+            border-color: #C30045;
+            animation: pulse-ring 2s ease-out infinite;
+        }
+
+        .timeline-item.in_progress .timeline-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #C30045;
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-out infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(195, 0, 69, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(195, 0, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(195, 0, 69, 0);
+            }
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .timeline-item.completed .timeline-content {
+            background: linear-gradient(135deg, rgba(195, 0, 69, 0.1) 0%, rgba(139, 0, 50, 0.1) 100%);
+        }
+
+        .timeline-item.in_progress .timeline-content {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .timeline-content h3 {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-content p {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-date {
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .status-badge.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.in_progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.pending {
+            background: #e2e3e5;
+            color: #6c757d;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Loading your claim progress...
+        </div>
+    </div>
+
+    <script>
+        async function loadProgress() {
+            try {
+                const response = await fetch('/api/progress');
+                const data = await response.json();
+
+                renderDashboard(data);
+            } catch (error) {
+                console.error('Error loading progress:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: white;">
+                        <h2>Error loading progress</h2>
+                        <p>Please try again later.</p>
+                        <button class="back-btn" onclick="location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Pending';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function renderDashboard(data) {
+            const app = document.getElementById('app');
+
+            const stagesHTML = data.stages.map(stage => `
+                <div class="timeline-item ${stage.status}">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>${stage.name}</h3>
+                        <p>${stage.description}</p>
+                        <div class="timeline-date">${formatDate(stage.date)}</div>
+                        <span class="status-badge ${stage.status}">
+                            ${stage.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+
+            app.innerHTML = `
+                <div class="header">
+                    <div class="header-content">
+                        <div>
+                            <h1>Claim Progress Dashboard</h1>
+                            <div class="claim-info">
+                                <strong>Customer:</strong> ${data.user_name} |
+                                <strong>Claim ID:</strong> ${data.claim_id}<br>
+                                <strong>Policy:</strong> ${data.policy_id} - ${data.product_name || ''}
+                            </div>
+                        </div>
+                        <a href="/" class="back-btn">Back to Chat</a>
+                    </div>
+                </div>
+
+                <div class="progress-overview">
+                    <div class="progress-header">
+                        <h2>Overall Progress</h2>
+                        <div class="progress-percentage">${data.progress_percentage}%</div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: ${data.progress_percentage}%"></div>
+                    </div>
+                    <div class="estimated-completion">
+                        <strong>Estimated Completion:</strong> ${formatDate(data.estimated_completion)}
+                    </div>
+                </div>
+
+                <div class="timeline">
+                    <h2>Claim Timeline</h2>
+                    <div class="timeline-items">
+                        ${stagesHTML}
+                    </div>
+                </div>
+
+                <div class="last-updated">
+                    Last updated: ${formatDate(data.last_updated)}
+                </div>
+            `;
+        }
+
+        // Load progress on page load
+        loadProgress();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadProgress, 30000);
+    </script>
+</body>
+</html>
