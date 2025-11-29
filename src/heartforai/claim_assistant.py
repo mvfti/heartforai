@@ -64,6 +64,10 @@ class PropertyClaim(BaseModel):
     postal_code: Optional[str] = Field(
         None, description="Postal code of the insured property."
     )
+    sentiment: Optional[int] = Field(
+        None,
+        description="Sentiment of the client. The sentiment score ranges from 0 to 5. 0 for neutral sentiment and progressively worse mood with an increase of 1",
+    )
 
     # -----------------------------------------------------
     # II. INCIDENT DATA (Extracted by LLM from user input)
@@ -119,9 +123,11 @@ def call_mistral_for_json(user_text: str) -> Dict[str, Any]:
     """LLM 1: Extracts user data into structured JSON (PropertyClaim)."""
 
     extraction_prompt = (
-        "You are a **home insurance expert**. Your role is to **extract the key information**"
-        "from the user's text to **fill the PropertyClaim JSON schema**."
-        "If any information is missing, **return 'null'** for the 'Optional' field."
+        "You are a compassionate insurance assistant helping someone who has experienced property damage. "
+        "Your role is to carefully listen to what they're telling you and extract the important details about their situation. "
+        "Pay attention to when the incident happened, where it occurred, what type of damage it was, and what caused it. "
+        "If any information is missing, that's okay - just mark those fields as 'null'. "
+        "Remember, you're helping a real person through a difficult time, so be thorough and understanding in processing their information."
     )
 
     messages = [
@@ -139,8 +145,10 @@ def call_mistral_for_query(missing_fields: List[str]) -> str:
     """LLM 2: Generates a question to retrieve missing information."""
 
     query_prompt = (
-        f"You are a **customer service assistant**. The following information is missing to process the file: {', '.join(missing_fields)}. "
-        f"Draft an **empathetic sentence** to ask the user for this supplementary information."
+        f"You are a caring insurance assistant helping someone through a difficult time. "
+        f"You need to gently ask for some missing information: {', '.join(missing_fields)}. "
+        f"Frame your question in a warm, conversational way - like you're talking to a friend who needs help. "
+        f"Acknowledge that you understand this might be hard to talk about, and make it clear you're here to help them."
     )
 
     messages = [
@@ -153,6 +161,43 @@ def call_mistral_for_query(missing_fields: List[str]) -> str:
         messages=messages,
     )
     return response.choices[0].message.content
+
+
+def call_mistral_for_sentiment(user_text: str) -> int:
+    """LLM: Analyzes the sentiment of the user's message and returns a score from 0 to 5."""
+
+    sentiment_prompt = (
+        "You are a **sentiment analysis expert**. Your role is to analyze the emotional tone "
+        "of the user's message and assign a sentiment score from 0 to 5.\n\n"
+        "Sentiment Scale:\n"
+        "- 0: Neutral (no strong emotion)\n"
+        "- 1: Slightly negative (minor concern or frustration)\n"
+        "- 2: Moderately negative (noticeable frustration or worry)\n"
+        "- 3: Negative (clear frustration, anger, or distress)\n"
+        "- 4: Very negative (strong anger, panic, or distress)\n"
+        "- 5: Extremely negative (severe distress, extreme anger, or desperation)\n\n"
+        "Respond with ONLY the numeric score (0-5), nothing else."
+    )
+
+    messages = [
+        {"role": "system", "content": sentiment_prompt},
+        {
+            "role": "user",
+            "content": f"Analyze the sentiment of this message: {user_text}",
+        },
+    ]
+
+    response = client.chat.complete(
+        model=MISTRAL_MODEL, messages=messages, temperature=0.1
+    )
+
+    try:
+        score = int(response.choices[0].message.content.strip())
+        # Ensure score is within valid range
+        return max(0, min(5, score))
+    except ValueError:
+        # Default to neutral if parsing fails
+        return 0
 
 
 def read_markdown_file() -> str:
@@ -178,23 +223,23 @@ def call_mistral_to_assess_coverage(client_str: str) -> str:
     client_data_str = "\n".join([f"- {k}: {v}" for k, v in client_data.items()])
 
     system_prompt = (
-        f"You are a highly skilled **Insurance Underwriter Agent**. Your task is to determine "
-        f"if a claim is likely covered based on the policy rules provided below.\n"
-        f"You MUST provide a clear rationale for your decision based ONLY on the provided data.\n\n"
-        f"--- POLICY RULES (MARKDOWN) ---\n"
+        f"You are a compassionate insurance professional helping someone understand their coverage after experiencing property damage. "
+        f"Your role is to carefully review their situation against the policy rules and explain what coverage applies. "
+        f"Be clear, honest, and kind in your assessment. Remember you're talking to someone who may be stressed or worried about their home.\n\n"
+        f"--- POLICY RULES ---\n"
         f"{general_conditions_md}\n"
-        f"-------------------------------\n"
+        f"-------------------\n"
     )
 
     user_prompt = (
-        f"Assess the coverage for the following claim incident:\n\n"
-        f"### INCIDENT DATA\n"
+        f"Please review this person's claim situation:\n\n"
+        f"### What happened:\n"
         f"{client_data_str}\n\n"
-        f"Based on the POLICY RULES and the INCIDENT DATA, is the claim covered? "
-        f"Your response MUST follow this exact structure:\n"
-        f"1. **DECISION:** [COVERED | NOT COVERED | NEEDS MORE INFO]\n"
-        f"2. **JUSTIFICATION (1 Sentence):** [One sentence explaining the reason based on policy rules.]\n"
-        f"3. **DISCLAIMER:** [The required disclaimer phrase.]"
+        f"Based on their policy and what they've told us, please assess their coverage. "
+        f"Structure your response as follows:\n"
+        f"1. **My Assessment:** [COVERED | NOT COVERED | NEEDS MORE INFO]\n"
+        f"2. **Here's why:** [Explain in one clear sentence, referencing the policy.]\n"
+        f"3. **Important note:** [Include the required disclaimer.]"
     )
 
     # Definition of DISCLAIMER
@@ -218,10 +263,18 @@ def call_mistral_to_assess_coverage(client_str: str) -> str:
     return response.choices[0].message.content
 
 
-def call_mistral_for_synthesis(final_prompt: str) -> str:
+def call_mistral_for_synthesis(final_prompt: str, sentiment: int = 0) -> str:
     """LLM 3: Synthesizes the humanized response after deterministic execution."""
 
-    synthesis_prompt = f"You are the case closure assistant. Synthesize the following response for the client in a professional and empathetic manner, confirming the actions taken. The actions to confirm are: {final_prompt}"
+    sentiment_context = ""
+    if sentiment >= 4:
+        sentiment_context = "The client is clearly very distressed and upset. Show deep empathy, acknowledge their difficult situation, and reassure them that you understand how challenging this must be."
+    elif sentiment >= 2:
+        sentiment_context = "The client is experiencing some frustration or worry. Be especially understanding and reassuring in your tone."
+    else:
+        sentiment_context = "Maintain a warm, supportive, and friendly tone."
+
+    synthesis_prompt = f"You are a compassionate insurance assistant speaking directly to a client who has experienced property damage. {sentiment_context} Communicate like a caring friend who wants to help - use 'I', 'you', 'we' naturally. Avoid corporate jargon and technical terms. The actions to confirm are: {final_prompt}. Make the client feel heard, supported, and confident that they're in good hands."
 
     messages = [
         {"role": "system", "content": synthesis_prompt},
@@ -305,7 +358,7 @@ async def start():
     ]
 
     await cl.Message(
-        content="👋 Welcome to HomeResQ. How can I assist you today?",
+        content="Hello! I'm really glad you reached out. I know dealing with property damage can be stressful, and I'm here to make this process as smooth as possible for you. Let's work through this together, step by step.",
     ).send()
 
     policy_data = get_random_policy()
@@ -318,7 +371,7 @@ async def start():
         json.dump(policy_data, f, indent=2)
 
     await cl.Message(
-        content=f"**Policy Data Loaded:** Policy ID `{policy_data.get('policy_id')}` ({policy_data.get('product_name')}). How can I help you with your claim today?",
+        content=f"I've pulled up your policy information - you're covered under our {policy_data.get('product_name')} plan. Whenever you're ready, please tell me what happened. Take your time and share as much detail as you're comfortable with.",
         author="Assur-Bot",
     ).send()
 
@@ -327,7 +380,7 @@ async def start():
 async def on_action(action: cl.Action):
     """Handle dashboard action button click"""
     await cl.Message(
-        content="🔗 Opening your claim progress dashboard...\n\n[Click here to view dashboard](/dashboard)",
+        content="You can check on your claim progress anytime! [Click here to view your dashboard](/dashboard)",
     ).send()
 
 
@@ -358,7 +411,7 @@ async def main(message: cl.Message):
     # STEP A: DATA EXTRACTION (Specialized LLM 1)
     # -----------------------------------------------------
     await cl.Message(
-        content="🧠 **LLM 1 - Extraction :** Filling the PropertyClaim schema...",
+        content="I'm listening carefully to what you're telling me... Let me make sure I understand everything correctly.",
         author="Agent",
     ).send()
 
@@ -366,15 +419,45 @@ async def main(message: cl.Message):
         json_str = await cl.make_async(call_mistral_for_json)(user_input)
     except Exception as e:
         await cl.Message(
-            content=f"Error during Mistral call (Extraction): {e}.",
-            author="System Error",
+            content=f"I apologize - I'm having a moment of technical difficulty understanding your message. Could you try rephrasing that for me? I really want to make sure I capture all the important details.",
+            author="Agent",
         ).send()
         return
+
+    # -----------------------------------------------------
+    # SENTIMENT ANALYSIS: Analyze user's emotional tone
+    # -----------------------------------------------------
+    # await cl.Message(
+    #     content="**Sentiment Analysis:** Evaluating message tone...",
+    #     author="Agent",
+    # ).send()
+    #
+    try:
+        sentiment_score = await cl.make_async(call_mistral_for_sentiment)(
+            message.content
+        )
+    except Exception as e:
+        # Silently default to neutral - no need to tell user about technical issues
+        sentiment_score = 0
 
     # Update state
     cl.user_session.set("current_incident_data", json_str)
 
     validated_instance: PropertyClaim = PropertyClaim.model_validate_json(json_str)
+
+    # Merge policy data and sentiment score into the model
+    policy_data = cl.user_session.get("policy_data")
+    if policy_data:
+        # Create merged data with policy info
+        merged_data = {**validated_instance.model_dump(), **policy_data}
+        # Set sentiment score in the merged data
+        merged_data["sentiment"] = sentiment_score
+        validated_instance = PropertyClaim.model_validate(merged_data)
+        json_trace = {
+            k: (v.value if isinstance(v, Enum) else v)
+            for k, v in validated_instance.model_dump().items()
+        }
+        cl.user_session.set("current_incident_data", json.dumps(json_trace, indent=2))
 
     # -----------------------------------------------------
     # STEP B: VALIDATION AND REQUEST FOR MISSING INFORMATION
@@ -385,20 +468,34 @@ async def main(message: cl.Message):
     )
 
     if missing_fields:
-        await cl.Message(
-            content="⚠️Some essential information is missing in order to move forward."
-        ).send()
+        # Create empathetic intro based on sentiment
+        if sentiment_score >= 4:
+            intro_msg = "I can hear how difficult this situation is for you. To help you as quickly as possible, I just need a few more details. I know it's hard to think about right now, but these will really help us move forward."
+        elif sentiment_score >= 2:
+            intro_msg = "I understand this is frustrating. To make sure we handle your claim properly, I need to ask you for a bit more information. It'll just take a moment."
+        else:
+            intro_msg = "Thank you for sharing that with me. To complete your claim, I need just a few more details from you. This will help us process everything smoothly."
+
+        await cl.Message(content=intro_msg).send()
 
         additional_info = []
 
+        # Create friendly field name mappings
+        field_friendly_names = {
+            "incident_date": "When did this happen? If you remember the approximate date and time, that would be really helpful",
+            "damage_location": "Where exactly in your home did the damage occur? For example, which room or area",
+            "cause": "What do you think caused this damage? Your best guess is perfectly fine",
+            "should_do_action": "Should we proceed with processing your claim"
+        }
+
         # --- BOUCLE "FORMULAIRE" ---
         for field in missing_fields:
-            # 1. On rend le nom du champ plus lisible (ex: incident_date -> Incident Date)
-            human_label = field.replace("_", " ").capitalize()
-
-            # 2. On utilise l'LLM (optionnel) ou une phrase simple pour poser la question
-            # Ici, on fait simple pour simuler un champ de formulaire
-            question_text = f"👉 Please specify: **{human_label}** ?"
+            # Use friendly question if available, otherwise generate one
+            if field in field_friendly_names:
+                question_text = field_friendly_names[field]
+            else:
+                human_label = field.replace("_", " ").lower()
+                question_text = f"Could you tell me about the {human_label}?"
 
             # 3. AskUserMessage bloque le script et attend la réponse de l'utilisateur
             res = await cl.AskUserMessage(content=question_text, timeout=180).send()
@@ -412,7 +509,8 @@ async def main(message: cl.Message):
         # pour s'assurer que le format (Date, Booléen) est correct.
 
         await cl.Message(
-            content="🔄 Updating claim application...", author="System"
+            content="Perfect, let me update everything with this new information...",
+            author="Agent"
         ).send()
 
         # On concatène l'ancien input avec les nouvelles infos
@@ -428,6 +526,8 @@ async def main(message: cl.Message):
             # (Important) On refusionne avec les données police car l'extraction LLM ne les a pas
             if policy_data:
                 merged_data = {**validated_instance.model_dump(), **policy_data}
+                # Set sentiment score in the merged data
+                merged_data["sentiment"] = sentiment_score
                 validated_instance = PropertyClaim.model_validate(merged_data)
                 json_trace = {
                     k: (v.value if isinstance(v, Enum) else v)
@@ -449,20 +549,30 @@ async def main(message: cl.Message):
 
             # Affichage de confirmation
             await cl.Message(
-                content=f"✅ Thank you! Complete application complete. Fields updated : {', '.join(missing_fields)}",
+                content="Great! I've got everything I need now. Thank you so much for bearing with me - I know answering questions isn't easy when you're dealing with damage to your home.",
                 author="Agent",
                 actions=actions,
             ).send()
 
         except Exception as e:
-            await cl.Message(content=f"Erreur lors de la mise à jour : {e}").send()
+            await cl.Message(
+                content="I'm so sorry, I seem to be having trouble updating your information. Could we try that one more time?"
+            ).send()
             return
     # -----------------------------------------------------
     # STEP C: EVALUATION IF THE CLIENT IS COVERED
     # -----------------------------------------------------
 
+    # Create sentiment-aware message
+    if sentiment_score >= 4:
+        assessment_msg = "I know you're going through a really tough time right now. Let me check your policy coverage - I'll do everything I can to help you..."
+    elif sentiment_score >= 2:
+        assessment_msg = "Let me review your policy details to see how we can best support you with this claim..."
+    else:
+        assessment_msg = "Now let me take a look at your policy to see what coverage applies to your situation..."
+
     await cl.Message(
-        content="⚖️ **LLM 3 - Coverage Assessment:** Evaluating claim eligibility...",
+        content=assessment_msg,
         author="Agent",
     ).send()
 
@@ -472,9 +582,17 @@ async def main(message: cl.Message):
         ),  # put the form with the mandatory information
     )
 
+    # Add empathetic framing based on sentiment
+    if sentiment_score >= 4:
+        intro = "I've carefully reviewed everything, and here's what I found:\n\n"
+    elif sentiment_score >= 2:
+        intro = "Okay, I've looked into your coverage. Here's the information:\n\n"
+    else:
+        intro = "Here's what I found regarding your coverage:\n\n"
+
     await cl.Message(
-        content=f"🔎 **Coverage Decision:**\n{coverage_assessment}",
-        author="Underwriter Bot",
+        content=f"{intro}{coverage_assessment}",
+        author="Agent",
     ).send()
 
     # Clean up state after successful execution
