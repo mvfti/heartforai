@@ -358,10 +358,6 @@ async def main(message: cl.Message):
     # -----------------------------------------------------
     # STEP A: DATA EXTRACTION (Specialized LLM 1)
     # -----------------------------------------------------
-    await cl.Message(
-        content="🧠 **LLM 1 - Extraction :** Filling the PropertyClaim schema...",
-        author="Agent",
-    ).send()
 
     try:
         json_str = await cl.make_async(call_mistral_for_json)(user_input)
@@ -392,21 +388,44 @@ async def main(message: cl.Message):
 
         additional_info = []
 
-        # --- BOUCLE "FORMULAIRE" ---
+        # --- FORM LOOP (use LLM to generate empathetic, field-specific questions) ---
         for field in missing_fields:
-            # 1. On rend le nom du champ plus lisible (ex: incident_date -> Incident Date)
-            human_label = field.replace("_", " ").capitalize()
+            # Ask the LLM to produce an empathetic question for the specific missing field
+            try:
+                query_message = await cl.make_async(call_mistral_for_query)([field])
+            except Exception:
+                # fallback to a simple question if LLM fails
+                human_label = field.replace("_", " ").capitalize()
+                query_message = f"👉 Please specify: **{human_label}** ?"
 
-            # 2. On utilise l'LLM (optionnel) ou une phrase simple pour poser la question
-            # Ici, on fait simple pour simuler un champ de formulaire
-            question_text = f"👉 Please specify: **{human_label}** ?"
+            # Ask the user the generated question and wait for reply
+            res = await cl.AskUserMessage(content=query_message, timeout=180).send()
 
-            # 3. AskUserMessage bloque le script et attend la réponse de l'utilisateur
-            res = await cl.AskUserMessage(content=question_text, timeout=180).send()
+            # Robust extraction of the user's single answer:
+            user_val = None
+            if not res:
+                user_val = None
+            else:
+                # Prefer structured inputs / output if present
+                if hasattr(res, "inputs") and res.inputs:
+                    # inputs may be a dict {field_id: value} or list-like; try to pick the first value
+                    if isinstance(res.inputs, dict):
+                        user_val = list(res.inputs.values())[0]
+                    else:
+                        user_val = res.inputs[0]
+                elif hasattr(res, "output") and isinstance(res.output, dict):
+                    # output may contain the value under the field key or be a single-entry dict
+                    user_val = res.output.get(field) or (next(iter(res.output.values())) if res.output else None)
+                else:
+                    # fallback: try parsing res.content as JSON or take raw content
+                    try:
+                        parsed = json.loads(res.content)
+                        user_val = parsed.get(field) or (next(iter(parsed.values())) if isinstance(parsed, dict) and parsed else None)
+                    except Exception:
+                        # last resort: raw content
+                        user_val = getattr(res, "content", None)
 
-            if res:
-                user_val = res["output"]
-                additional_info.append(f"The user specifies for {field} : {user_val}")
+            additional_info.append(f"The user specifies for {field} : {user_val}")
 
         # --- MISE A JOUR DES DONNÉES ---
         # On injecte les nouvelles réponses dans le contexte et on relance l'extraction
