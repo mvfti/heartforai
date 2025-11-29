@@ -1,14 +1,14 @@
 {
-  "policy_id": "900159642",
-  "client_name": "Khadija Dubos",
-  "address": "Walvisstraat 787, 7182 Waregem",
-  "date_of_birth": "2003-08-05",
+  "policy_id": "900632342",
+  "client_name": "Nils Stephan",
+  "address": "De Leggen 510, 1153 Gent",
+  "date_of_birth": "1973-09-09",
   "product_id": "2180",
   "product_name": "Home Insurance - Complete",
   "coverage_desc": "Fire, Water Damage, Storm, Theft, Glass Breakage, Natural Disasters",
-  "policy_start_dt": "2022-08-11",
-  "policy_end_dt": "2025-08-10",
-  "premium_amt": 599.46,
+  "policy_start_dt": "2023-02-13",
+  "policy_end_dt": "2026-02-12",
+  "premium_amt": 612.03,
   "language": "FR",
-  "postal_code": "7182"
+  "postal_code": "1153"
 }
