@@ -1,14 +1,14 @@
 {
-  "policy_id": "900679364",
-  "client_name": "Riyad Nicolle",
-  "address": "Steyvekaitse 942, 7950 Eupen",
-  "date_of_birth": "1979-01-23",
-  "product_id": "2181",
-  "product_name": "Home Insurance - Premium",
-  "coverage_desc": "Fire, Water Damage, Storm, Theft, Glass Breakage, Natural Disasters, Legal Protection",
-  "policy_start_dt": "2022-07-26",
-  "policy_end_dt": "2025-07-25",
-  "premium_amt": 822.22,
+  "policy_id": "900159642",
+  "client_name": "Khadija Dubos",
+  "address": "Walvisstraat 787, 7182 Waregem",
+  "date_of_birth": "2003-08-05",
+  "product_id": "2180",
+  "product_name": "Home Insurance - Complete",
+  "coverage_desc": "Fire, Water Damage, Storm, Theft, Glass Breakage, Natural Disasters",
+  "policy_start_dt": "2022-08-11",
+  "policy_end_dt": "2025-08-10",
+  "premium_amt": 599.46,
   "language": "FR",
-  "postal_code": "7950"
+  "postal_code": "7182"
 }
