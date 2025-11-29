@@ -1,0 +1,13 @@
+#!/usr/bin/python3
+
+import subprocess
+import sys
+
+if __name__ == "__main__":
+    try:
+        process = subprocess.Popen(["uv", "run", "chainlit", "run", "app.py"])
+        process.wait()
+    except KeyboardInterrupt:
+        process.terminate()
+    finally:
+        sys.exit(0)
