@@ -300,13 +300,12 @@ async def start():
             value="dashboard",
             payload={"url": "/dashboard"},
             label="📊 View Claim Progress",
-            description="Check your claim status on the dashboard"
+            description="Check your claim status on the dashboard",
         )
     ]
 
     await cl.Message(
         content="👋 Welcome to HomeResQ. How can I assist you today?",
-        actions=actions,
     ).send()
 
     policy_data = get_random_policy()
@@ -315,7 +314,7 @@ async def start():
 
     # Save current policy to file so dashboard can access it
     current_session_file = PROJECT_ROOT / "database" / "current_session.json"
-    with open(current_session_file, 'w') as f:
+    with open(current_session_file, "w") as f:
         json.dump(policy_data, f, indent=2)
 
     await cl.Message(
@@ -438,10 +437,21 @@ async def main(message: cl.Message):
                     "current_incident_data", json.dumps(json_trace, indent=2)
                 )
 
+            actions = [
+                cl.Action(
+                    name="view_dashboard",
+                    value="dashboard",
+                    payload={"url": "/dashboard"},
+                    label="📊 View Claim Progress",
+                    description="Check your claim status on the dashboard",
+                )
+            ]
+
             # Affichage de confirmation
             await cl.Message(
                 content=f"✅ Thank you! Complete application complete. Fields updated : {', '.join(missing_fields)}",
                 author="Agent",
+                actions=actions,
             ).send()
 
         except Exception as e:
