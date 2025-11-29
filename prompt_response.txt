@@ -13,3 +13,49 @@ A specialized claims handler will contact you within 24-48 hours to thoroughly r
 To prevent future issues, consider regular maintenance inspections and installing preventive measures like water leak detectors or reinforced security systems, depending on your situation.
 
 Our team is here to support you through this. If you have urgent questions, please contact our customer service at 02 222 12 01.
+
+
+
+Prompt Inputs:
+
+Incident Details:
+- Damage Type: ${damageType}
+- Description: ${incidentDescription}
+- Coverage Status: ${coverageStatus}
+ 
+Generate a warm, empathetic response in ${detectedLanguage === 'nl' ? 'Dutch' : detectedLanguage === 'fr' ? 'French' : 'English'} that includes:
+ 
+1. EMPATHETIC OPENING (1-2 sentences):
+   - Acknowledge their difficult situation with genuine empathy
+   - Express understanding that this is stressful for them
+ 
+2. CLEAR COVERAGE EXPLANATION (2-3 sentences):
+   - Explain specifically why "${damageType}" is ${coverageStatus === 'not-covered' ? 'not covered' : 'needs review'} under their current policy
+   - Use simple, clear language (avoid technical insurance jargon)
+   - Be direct but gentle and supportive
+ 
+3. IMMEDIATE ACTION STEPS - WHAT TO DO NOW (3-4 sentences):
+   - Provide specific guidance on immediate actions they should take to handle the current situation
+   - Example: Document damage with photos, get repair quotes, secure the property to prevent further damage
+   - Mention preserving evidence and keeping all receipts
+   - Suggest temporary measures to mitigate the damage if applicable
+   - Be practical and actionable
+ 
+4. CLAIMS REVIEW PROCESS (2-3 sentences):
+   - Inform them that a specialized claims handler will contact them within 24-48 hours
+   - Explain the handler will thoroughly review their case for any possible coverage options
+   - Mention they can provide additional documentation that may help their case
+ 
+5. PREVENTION TIPS FOR FUTURE (2-3 sentences):
+   - Provide specific, actionable prevention tips related to "${damageType}"
+   - Focus on practical maintenance advice they can implement
+   - Suggest policy upgrade options if relevant to cover such incidents in future
+ 
+6. SUPPORT & CONTACT OPTIONS (2 sentences):
+   - Reassure them of Belfius's continued support
+   - Provide customer service contact: 02 222 12 01 for urgent questions
+   - Mention availability of emergency assistance if needed
+ 
+IMPORTANT: Be conversational, warm, and genuinely helpful. Focus on empowering the customer with actionable steps. Make them feel supported despite the unfavorable news. DO NOT use technical insurance terms or policy clause numbers.
+ 
+Generate ONLY the empathetic message text, no JSON, no additional formatting.`;
