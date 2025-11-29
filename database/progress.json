@@ -1,0 +1,46 @@
+{
+  "claim_id": "CLM-2024-001",
+  "user_name": "John Doe",
+  "policy_id": "POL-12345",
+  "stages": [
+    {
+      "id": 1,
+      "name": "Claim Submitted",
+      "description": "Your claim has been received",
+      "status": "completed",
+      "date": "2024-11-28T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Case Assigned to Claim Handler",
+      "description": "A dedicated claim handler has been assigned to your case",
+      "status": "completed",
+      "date": "2024-11-28T14:30:00Z"
+    },
+    {
+      "id": 3,
+      "name": "Expert Assessment",
+      "description": "Expert is assessing your claim",
+      "status": "in_progress",
+      "date": null
+    },
+    {
+      "id": 4,
+      "name": "Claim Approved",
+      "description": "Final decision on your claim",
+      "status": "pending",
+      "date": null
+    },
+    {
+      "id": 5,
+      "name": "Payment Processed",
+      "description": "Payment has been initiated",
+      "status": "pending",
+      "date": null
+    }
+  ],
+  "current_stage": 3,
+  "progress_percentage": 50,
+  "estimated_completion": "2024-12-05",
+  "last_updated": "2024-11-29T02:00:00Z"
+}
